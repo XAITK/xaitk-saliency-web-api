@@ -3,7 +3,13 @@
 ## Intent
 Provide dockerized api module for interaction with https://github.com/XAITK/xaitk-saliency package
 
-## Setup
+## Setup for Users
+Open command line and execute the following commands:
+- docker pull robertjb/xaitkimage
+- docker run -p 8000:8000 --name xaitkcontainer robertjb/xaitkimage
+- - container name and ports are arbitrary
+
+## Setup for developers
 Docker container build:
 - $ docker build -t xaitkimage .
 
