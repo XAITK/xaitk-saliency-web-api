@@ -1,14 +1,13 @@
 from fastapi import FastAPI
-from .main import app
+from .main import app, create_upload_file, create_upload_file_with_parameters, displayImage, read_image_data, perturb_image, create_upload_file
 from PIL import Image
 from fastapi.testclient import TestClient
+import requests
 
 client = TestClient(app)
 
-testimage = Image.open('test.jpeg')
+testimage = Image.open('1616031519513.jpg')
 testimageurl = 'https://farm1.staticflickr.com/74/202734059_fcce636dcd_z.jpg'
-
-# works
 
 
 def test_read_root():
@@ -18,22 +17,50 @@ def test_read_root():
 
 
 def test_read_image_data():
-    data = {"image_url": 'https://farm1.staticflickr.com/74/202734059_fcce636dcd_z.jpg'}
-    response = client.get(
-        "/imageurl", "https://farm1.staticflickr.com/74/202734059_fcce636dcd_z.jpg")
-    assert response.status_code == 200
 
-    # 422 error?
+    response = read_image_data(
+        'https://farm1.staticflickr.com/74/202734059_fcce636dcd_z.jpg')
+    assert response == {"Width": 640,
+                        "Height": 480,
+                        "Format": 'JPEG'}
+
+
+def test_perturb_url():
+    response = perturb_image(
+        'https://farm1.staticflickr.com/74/202734059_fcce636dcd_z.jpg')
+    assert response == {"Successfully perturbed": 200}
 
 
 def test_create_upload_file():
-    with open("borat.jpeg", "rb") as image:
-        f = image.read()
-        b = bytearray(f)
 
-    response = client.post('/perturb', b)
-    assert response.status_code == 200
+    file = open('1616031519513.jpg', 'rb')
+    response = create_upload_file(file)
 
-    # def test_read_image():
-    #    response = client.get("/imageurl", headers={""})
-    #    assert response.status_code == 200
+    print(response)
+    response == {"filename": "1616031519513.jpg",
+                 "Pert Masks": [
+                     1320,
+                     574,
+                     462
+                 ]
+                 }
+
+
+def test_create_upload_with_parameters():
+
+    file = open('1616031519513.jpg', 'rb')
+    response = create_upload_file_with_parameters(40, 20, file)
+    response == {"filename": "1616031519513.jpg",
+                 "Pert Masks": [
+                     920,
+                     514,
+                     362
+                 ]
+                 }
+
+
+def test_display_image():
+    file = open('1616031519513.jpg', 'rb')
+    response = displayImage(file)
+    response == {file}
+
