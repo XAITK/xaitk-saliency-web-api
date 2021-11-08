@@ -69,6 +69,28 @@ async def create_upload_file(file: UploadFile = File(...)):
 
     }
 
+
+@app.post('/perturbWithParameters')
+async def create_upload_file_with_parameters(windowSizeDefault40, windowStrideDefault15, file: UploadFile = File(...)):
+    # open the image byte by byte
+    img = PIL.Image.open(file.file)
+
+    # throw image data into an array
+    img_arr = np.array(img)
+
+    # create the sliding window algorithm
+    slid_algo = SlidingWindow(window_size=(windowSizeDefault40, windowSizeDefault40), stride=(
+        windowStrideDefault15, windowStrideDefault15))
+
+    # create multiple masks of the original image
+    pert_masks = slid_algo.perturb(img_arr)
+
+    return {
+
+        "filename": file.filename,
+        "Pert Masks": pert_masks.shape
+
+    }
 # takes in an image as input and returns the image as output
 @app.post('/displayImage')
 # image file needs to be uploaded as bytes for it to be returned properly
