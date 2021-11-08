@@ -72,7 +72,7 @@ async def create_upload_file(file: UploadFile = File(...)):
 # takes in an image as input and returns the image as output
 @app.post('/displayImage')
 # image file needs to be uploaded as bytes for it to be returned properly
-async def goPup(file: bytes = File(...)):
+async def displayImage(file: bytes = File(...)):
     # although media type is defined as image/jpeg this will work for other image formats as well
     # because the browser interprets the image regardless of the MIME type we define it as
     return Response(content = file, media_type= 'image/jpeg')
