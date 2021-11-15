@@ -118,9 +118,12 @@ Robert Bennett
 Kitware
 
 ## License
-?
 
-## API Documentation
+© Robert Bennett, Griffin Groh, Zackary Zeplin; University of North Carolina
+
+Licensed under the [MIT License](LICENSE).
+
+# API Documentation
 
 >### /imageurl
 - input: image URL
