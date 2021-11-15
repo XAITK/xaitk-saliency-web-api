@@ -52,7 +52,7 @@ This app is deployed through Docker and is distributed through DockerHub via thi
 ```
 docker pull robertjb/xaitkimage
 ```
-### End users can use the app by following these steps:
+### Users can use the app by following these steps:
 Open command line and execute the following commands:
 ```
 - docker pull robertjb/xaitkimage
@@ -94,13 +94,13 @@ Note: You will need to rebuild the Docker container after making changes to the 
 ## Technologies Used
 
 ### Docker
-For this project we used Docker to "host" our application, essentially the Docker image's purpose is to build the local API environment for the user without them having to install any dependancies.
+For this project we used Docker to containerize our application, essentially the Docker image's purpose is to build a transportable API environment for the user without them having to install any dependancies. Users and developers can simply pull and/or build the docker container, which comes pre-packaged with all necessary dependencies, encapsulated within our application container. The result of this use of docker is an "OS-agnostic" and easily distributable application.
 
 ### FastAPI & Xaitk-Saliency
 This app is built entirely within the FastAPI framework and most of the code within each endpoint is a part of the xaitk-saliency package.
 
 ### Architecture
-Our architecture diagram can be found here: https://github.com/XAITK/xaitk-saliency-web-api/blob/master/architecture_diagram.pdf
+Our architecture diagram can be found [Here](architecture_diagram.pdf). 
 
 
 ## Contributing
