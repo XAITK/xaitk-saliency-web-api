@@ -1,6 +1,7 @@
-from fastapi import FastAPI, Header
-from typing import Optional, Union, Sequence
+from fastapi import FastAPI, Depends
+from typing import Optional
 from fastapi import FastAPI, UploadFile, File, Header
+from smqtk_classifier.interfaces.classify_image import ClassifyImage
 import uvicorn
 import xaitk_saliency
 from xaitk_saliency.impls.perturb_image.sliding_window import SlidingWindow
@@ -11,107 +12,137 @@ from xaitk_saliency.utils.masking import occlude_image_batch
 from xaitk_saliency.impls.gen_descriptor_sim_sal.similarity_scoring import SimilarityScoring
 from xaitk_saliency import PerturbImage, GenerateDescriptorSimilaritySaliency
 from xaitk_saliency.utils.masking import occlude_image_batch
-import os
-
+from xaitk_saliency.impls.gen_image_classifier_blackbox_sal.slidingwindow import SlidingWindowStack
+from xaitk_saliency.impls.gen_classifier_conf_sal.occlusion_scoring import OcclusionScoring
+import pickle
 
 
 
 app = FastAPI()
 
+@app.post('/OcclusionScoring')
+async def occlusionScoring(ref_preds: bytes = File(...), pert_preds: bytes = File(...), pert_masks: bytes = File(...)):
+    # convert ref_preds, pert_preds, and pert_masks from bytes to ndarrays
+    ref_preds = pickle.loads(ref_preds)
+    pert_preds = pickle.loads(pert_preds)
+    pert_masks = pickle.loads(pert_masks)
+
+    # initialize OcclusionScoring class
+    sal_maps_generator = OcclusionScoring()
+
+    # generate saliency maps using OcclusionScoring
+    sal_maps = sal_maps_generator(ref_preds, pert_preds, pert_masks)
+
+    # convert saliency maps from ndarray to bytes
+    sal_maps = pickle.dumps(sal_maps)
+    
+    # return saliency maps as bytes
+    return Response(content = sal_maps)
+
+# not functional yet
+# need to figure out how to pass a blackbox model through the API
+@app.post('/SlidingWindowStack')
+async def slidingWindowStack(window_height: int, window_width: int, stride_height_step: int, stride_width_step: int, num_threads: Optional[int],  
+                             fill: Optional[bytes] = File(...), ref_image: UploadFile = File(...), blackbox: bytes = File(...)):
+
+    # load image from SpooledTemoraryFile to ndarray
+    image = PIL.Image.open(ref_image.file)
+    ref_image = np.array(image)
+
+    # load fill from bytes to ndarray
+    fill = pickle.loads(fill)
+
+    # load blackbox classifier from bytes 
+    blackbox = pickle.loads(blackbox)
+
+    # initialize SlidingWindowStack with params and apply fill
+    gen_sliding_window = SlidingWindowStack((window_height, window_width), (stride_height_step, stride_width_step), threads=num_threads)
+    gen_sliding_window.fill = fill
+
+    # generate saliency maps from ref image and blackbox algorithm
+    sal_maps = gen_sliding_window(ref_image, blackbox)
+
+    # convert sal_maps from ndarray to bytes
+    sal_maps_as_bytes = pickle.dumps(sal_maps)
+
+    return Response(content = sal_maps_as_bytes)
+
 
 @app.post('/similarityScoring')
-async def similarityScoring(loc: str, query_feat: UploadFile = File(...), ref_feat: UploadFile = File(...), pert_feat_ref: UploadFile = File(...), pert_masks: UploadFile = File(...)):
-    query_feat = np.load(query_feat.file)
-    ref_feat = np.load(ref_feat.file)
-    pert_feat_ref = np.load(pert_feat_ref.file)
-    pert_masks = np.load(pert_masks.file)
+async def similarityScoring(query_feat: bytes = File(...), ref_feat: bytes = File(...), pert_feat_ref: bytes = File(...), pert_masks: bytes = File(...)):
+    # convert all byte arrays to ndarrays
+    query_feat = pickle.loads(query_feat)
+    ref_feat = pickle.loads(ref_feat)
+    pert_feat_ref = pickle.loads(pert_feat_ref)
+    pert_masks = pickle.loads(pert_masks)
 
+    # initialize Similarity Scoring Algorithm
     similarity_alg = SimilarityScoring()
 
-    salMaps = similarity_alg(query_feat,
+    # save saliency ndarray to sal_maps
+    sal_maps = similarity_alg(query_feat,
                                ref_feat,
                                pert_feat_ref,
                                pert_masks)
     
-    filepath = loc + '/' + 'sal_maps.npy'
-    np.save(filepath, salMaps)
+    # convert sal_maps from ndarray to bytes 
+    sal_maps_as_bytes = pickle.dumps(sal_maps)
 
-    return JSONResponse({'sal_maps_file': filepath})
+    return Response(content = sal_maps_as_bytes)
 
 
-@app.post("/occlusionMapFromFiles")
-async def occlusionMapFromFiles(loc: str, npyfile: UploadFile = File(...), file: UploadFile = File(...), fill: UploadFile = File(...)):
-    # masks = npyfile.file
-    mask_array = np.load(npyfile.file, allow_pickle=True)
-    fill = np.load(fill.file, allow_pickle=True)
+@app.post("/occlude_image_batch")
+async def occlusionMapFromFiles(pert_masks: bytes = File(...), fill: Optional[bytes] = File(...), ref_image: UploadFile = File(...)):
+    # load pert_masks from bytes to ndarray
+    pert_masks = pickle.loads(pert_masks)
 
-    image = PIL.Image.open(file.file)
+    # load image from SpooledTemoraryFile to ndarray
+    image = PIL.Image.open(ref_image.file)
     ref_image = np.array(image)
-    print(fill)
-    occlusion_image_ndarray = occlude_image_batch(ref_image, mask_array, fill)
 
-    filepath = loc + '/' + 'occlusionmap.npy'
+    # if there is a fill array load it from bytes to ndarray
+    if fill:
+        fill = pickle.loads(fill)
 
-    np.save(filepath, occlusion_image_ndarray)
+        # run xaitk occlude_image_batch with fill
+        occlusion_image_ndarray = occlude_image_batch(ref_image, pert_masks, fill)
 
-    return JSONResponse({"occlusion_map_file": filepath})
+        # convert ndarray to bytes
+        occlusion_image_as_bytes = pickle.dumps(occlusion_image_ndarray)
 
+        return Response(content = occlusion_image_as_bytes)
+    
+    # run xaitk occlude_image_batch without fill
+    occlusion_image_ndarray = occlude_image_batch(ref_image, pert_masks)
+
+    # convert ndarray to bytes
+    occlusion_image_as_bytes = pickle.dumps(occlusion_image_ndarray)
+
+    return Response(content = occlusion_image_as_bytes)
 
 @app.get("/")
 def read_root():
     return {"message": "Hello World"}
 
 
-@app.post('/perturb/')
-async def create_upload_file(loc: str, file: UploadFile = File(...)):
+@app.post('/sliding_window_perturb/')
+async def create_upload_file(window_size_x: int, window_size_y: int, stride_x: int, stride_y: int, ref_image: UploadFile = File(...)):
     # open the image byte by byte
-
-    img = PIL.Image.open(file.file)
+    img = PIL.Image.open(ref_image.file)
 
     # throw image data into an array
     img_arr = np.array(img)
 
     # create the sliding window algorithm
-    slid_algo = SlidingWindow(window_size=(40, 40), stride=(15, 15))
+    slid_algo = SlidingWindow(window_size=(window_size_x, window_size_y), stride=(stride_x, stride_y))
 
     # create multiple masks of the original image
     pert_masks = slid_algo.perturb(img_arr)
 
-    filepath = loc + '/' + file.filename.split('.')[0] + '_pert_masks.npy'
-
-    np.save(filepath, pert_masks)
-
-    return JSONResponse(content = {'pert_masks_file': filepath})
-    # return FileResponse(filename_to_be_created, filename=filename_to_be_created)
-    # return Response(content = filename_to_be_created, media_type = '.npy')
+    pert_masks_as_bytes = pickle.dumps(pert_masks)
     
-
-
-@app.post('/perturbWithParameters')
-async def create_upload_file_with_parameters(windowSizeDefault40, windowStrideDefault15, file: UploadFile = File(...)):
-    # open the image byte by byte
-    img = PIL.Image.open(file.file)
-
-    # throw image data into an array
-    img_arr = np.array(img)
-
-    # create the sliding window algorithm
-    slid_algo = SlidingWindow(window_size=(windowSizeDefault40, windowSizeDefault40), stride=(
-        windowStrideDefault15, windowStrideDefault15))
-
-    # create multiple masks of the original image
-    pert_masks = slid_algo.perturb(img_arr)
-    filename_to_be_created = '' + file.filename + '_pert_masks.npy'
-    np.save(filename_to_be_created, pert_masks)
-
-    return FileResponse(filename_to_be_created, filename=filename_to_be_created)
-
-
-@app.post('/displayImage')
-async def displayImage(file: bytes = File(...)):
-    # although media type is defined as image/jpeg this will work for other image formats as well
-    # because the browser interprets the image regardless of the MIME type we define it as
-    return Response(content=file, media_type='image/jpeg')
+    return Response(content = pert_masks_as_bytes)
+    
 
 
 if __name__ == "__main__":
