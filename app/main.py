@@ -16,11 +16,37 @@ from xaitk_saliency.impls.gen_image_classifier_blackbox_sal.slidingwindow import
 from xaitk_saliency.impls.gen_classifier_conf_sal.occlusion_scoring import OcclusionScoring
 import pickle
 
+tags_metadata = [
+    {
+        "name": "OcclusionScoring",
+        "description": "Implements the XAITK OcclusionScoring class. Returns a ndarray representing saliency maps as bytes.",
+    },
+    {
+        "name": "SlidingWindowStack",
+        "description": "Under construction, do not use.",
+    },
+    {
+        "name": "SimilarityScoring",
+        "description": "Implements the XAITK SimilarityScoring class. Returns a ndarray representing saliency maps as bytes.",
+    },
+    {
+        "name": "OccludeImageBatch",
+        "description": "Implements the XAITK occlude_image_batch function. Returns a ndarray representing perturbed images as bytes.",
+    },
+    {
+        "name": "SlidingWindowPerturb",
+        "description": "Implements the XAITK SlidingWindow class and the SlidingWindow.perturb method. Returns a ndarray representing perturbation masks as bytes.",
+    },
+    {
+        "name": "Default",
+        "description": "Hello World",
+    }
+]
 
 
-app = FastAPI()
+app = FastAPI(openapi_tags=tags_metadata)
 
-@app.post('/OcclusionScoring')
+@app.post('/OcclusionScoring', tags=["OcclusionScoring"])
 async def occlusionScoring(ref_preds: bytes = File(...), pert_preds: bytes = File(...), pert_masks: bytes = File(...)):
     # convert ref_preds, pert_preds, and pert_masks from bytes to ndarrays
     ref_preds = pickle.loads(ref_preds)
@@ -41,7 +67,7 @@ async def occlusionScoring(ref_preds: bytes = File(...), pert_preds: bytes = Fil
 
 # not functional yet
 # need to figure out how to pass a blackbox model through the API
-@app.post('/SlidingWindowStack')
+@app.post('/SlidingWindowStack', tags = ["SlidingWindowStack"])
 async def slidingWindowStack(window_height: int, window_width: int, stride_height_step: int, stride_width_step: int, num_threads: Optional[int],  
                              fill: Optional[bytes] = File(...), ref_image: UploadFile = File(...), blackbox: bytes = File(...)):
 
@@ -68,7 +94,7 @@ async def slidingWindowStack(window_height: int, window_width: int, stride_heigh
     return Response(content = sal_maps_as_bytes)
 
 
-@app.post('/similarityScoring')
+@app.post('/similarityScoring', tags = ["SimilarityScoring"])
 async def similarityScoring(query_feat: bytes = File(...), ref_feat: bytes = File(...), pert_feat_ref: bytes = File(...), pert_masks: bytes = File(...)):
     # convert all byte arrays to ndarrays
     query_feat = pickle.loads(query_feat)
@@ -91,8 +117,8 @@ async def similarityScoring(query_feat: bytes = File(...), ref_feat: bytes = Fil
     return Response(content = sal_maps_as_bytes)
 
 
-@app.post("/occlude_image_batch")
-async def occlusionMapFromFiles(pert_masks: bytes = File(...), fill: Optional[bytes] = File(...), ref_image: UploadFile = File(...)):
+@app.post("/occlude_image_batch", tags = ["OccludeImageBatch"])
+async def occlude_image(pert_masks: bytes = File(...), fill: Optional[bytes] = File(...), ref_image: UploadFile = File(...)):
     # load pert_masks from bytes to ndarray
     pert_masks = pickle.loads(pert_masks)
 
@@ -120,12 +146,12 @@ async def occlusionMapFromFiles(pert_masks: bytes = File(...), fill: Optional[by
 
     return Response(content = occlusion_image_as_bytes)
 
-@app.get("/")
+@app.get("/", tags = ["Default"])
 def read_root():
     return {"message": "Hello World"}
 
 
-@app.post('/sliding_window_perturb/')
+@app.post('/sliding_window_perturb/', tags = ["SlidingWindowPerturb"])
 async def create_upload_file(window_size_x: int, window_size_y: int, stride_x: int, stride_y: int, ref_image: UploadFile = File(...)):
     # open the image byte by byte
     img = PIL.Image.open(ref_image.file)
