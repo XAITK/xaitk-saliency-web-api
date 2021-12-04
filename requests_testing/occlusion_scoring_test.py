@@ -1,8 +1,6 @@
 # Set up our "black box" classifier using PyTorch and it's ImageNet pretrained ResNet18.
 # We will constrain the output of our classifier here to the two classes that are relevant
 # to our test image for the purposes of this example.
-import os
-from typing import TypedDict
 import numpy as np
 import torch
 import torchvision.models as models
@@ -185,4 +183,3 @@ for i, class_sal_map in enumerate(sal_maps):
     plt.title(f"Class #{i+1} Neg Saliency")
     plt.axis('off')
     plt.show()
-

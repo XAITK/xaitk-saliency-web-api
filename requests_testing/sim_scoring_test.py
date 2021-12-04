@@ -96,7 +96,7 @@ pert_feat_ref = pickle.dumps(pert_feat_ref)
 # create json query params for the Similarity Scoring API call
 sim_scoring_params = {'query_feat': query_feat, 'ref_feat': ref_feat, 'pert_feat_ref': pert_feat_ref, 'pert_masks': pert_masks}
 
-# use the web api to generate a saliency ndarray 
+# use the web api to generate a saliency map ndarray 
 sal_maps = requests.post('http://127.0.0.1:8000/similarityScoring', files=sim_scoring_params).content
 
 # convert the saliency maps from bytes to a ndarray
@@ -146,12 +146,3 @@ for i, class_sal_map in enumerate(sal_maps):
     plt.axis('off')
 plt.show()
 plt.close()
-
-
-
-
-
-
-
-
-
