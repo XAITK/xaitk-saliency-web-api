@@ -1,17 +1,13 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 from typing import Optional
-from fastapi import FastAPI, UploadFile, File, Header
-from smqtk_classifier.interfaces.classify_image import ClassifyImage
+from fastapi import FastAPI, UploadFile, File
 import uvicorn
-import xaitk_saliency
 from xaitk_saliency.impls.perturb_image.sliding_window import SlidingWindow
 import numpy as np
 import PIL.Image
-from fastapi.responses import FileResponse, Response, JSONResponse
+from fastapi.responses import Response
 from xaitk_saliency.utils.masking import occlude_image_batch
 from xaitk_saliency.impls.gen_descriptor_sim_sal.similarity_scoring import SimilarityScoring
-from xaitk_saliency import PerturbImage, GenerateDescriptorSimilaritySaliency
-from xaitk_saliency.utils.masking import occlude_image_batch
 from xaitk_saliency.impls.gen_image_classifier_blackbox_sal.slidingwindow import SlidingWindowStack
 from xaitk_saliency.impls.gen_classifier_conf_sal.occlusion_scoring import OcclusionScoring
 import pickle
